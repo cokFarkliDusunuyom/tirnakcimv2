@@ -1,0 +1,70 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function validText(value, minLength, maxLength) {
+      return value is string && value.size() >= minLength && value.size() <= maxLength;
+    }
+
+    match /services/{serviceId} {
+      allow read: if resource.data.isActive == true;
+      allow write: if false;
+    }
+
+    match /salons/{salonId} {
+      allow read: if resource.data.isActive == true;
+      allow write: if false;
+    }
+
+    match /stylists/{stylistId} {
+      allow read: if resource.data.isActive == true;
+      allow write: if false;
+    }
+
+    match /salonServices/{salonServiceId} {
+      allow read: if resource.data.isActive == true;
+      allow write: if false;
+    }
+
+    match /availability/{slotId} {
+      allow read: if resource.data.status == 'available';
+      allow write: if false;
+    }
+
+    match /salonApplications/{applicationId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'salonName', 'contactName', 'phone', 'district', 'city', 'status', 'createdAt'
+        ])
+        && validText(request.resource.data.salonName, 2, 100)
+        && validText(request.resource.data.contactName, 2, 100)
+        && validText(request.resource.data.phone, 10, 20)
+        && validText(request.resource.data.district, 2, 60)
+        && request.resource.data.city == 'Ankara'
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
+
+    match /appointments/{appointmentId} {
+      allow create: if request.resource.data.keys().hasOnly([
+          'salonId', 'stylistId', 'serviceId', 'availabilityId', 'customerName',
+          'customerPhone', 'startsAt', 'endsAt', 'status', 'createdAt'
+        ])
+        && validText(request.resource.data.salonId, 1, 150)
+        && validText(request.resource.data.stylistId, 1, 150)
+        && validText(request.resource.data.serviceId, 1, 150)
+        && validText(request.resource.data.availabilityId, 1, 150)
+        && validText(request.resource.data.customerName, 2, 100)
+        && validText(request.resource.data.customerPhone, 10, 20)
+        && request.resource.data.startsAt is timestamp
+        && request.resource.data.endsAt is timestamp
+        && request.resource.data.startsAt < request.resource.data.endsAt
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow read, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
